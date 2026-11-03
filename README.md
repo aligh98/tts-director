@@ -20,7 +20,7 @@ It works with [Claude Code](https://claude.com/claude-code) and any agent that r
 Claude Code (personal skill):
 
 ```bash
-git clone https://github.com/<you>/tts-director ~/.claude/skills/tts-director
+git clone https://github.com/aligh98/tts-director ~/.claude/skills/tts-director
 ```
 
 Or clone it into a project's `.claude/skills/`. The skill triggers whenever a script is headed to a TTS engine, or when you ask for a more expressive or human-sounding voice.
