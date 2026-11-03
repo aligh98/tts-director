@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/banner.jpg" alt="tts-director: a microphone, a clapperboard and a waveform tagged [laughs], [whispers], [excited]" width="100%"></p>
+
 # tts-director
 
 **English** · [فارسی](README.md)
