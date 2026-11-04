@@ -16,6 +16,16 @@ TTS reads exactly what it is given. Written Persian («بنابراین لازم
   | گوشیتو | گوشی‌ات را |
 
 - Add vowel marks (َ ِ ُ ْ) only where a word could be read two ways, and on every loanword or brand name the model might misread: «اَپْ»، «آپْدِیْتْ». A sukun on the final consonant and on «ی» in diphthongs («رِیْج»، «فِیْل») stops the model from stretching vowels. To keep captions clean, give the TTS the marked text and show the unmarked text on screen.
+- **The alef rule.** The voice reads every «ا» (and «آ») as a long /ɒː/, and no diacritic shortens it. A short /a/ is a fatha on the consonant, with no «ا». Never fix a word by adding, or by keeping, an «ا» that the sound does not have.
+  - Example: «بالاخره» is said bel'akhare. Respelled «بِلاخَرِه», it was read «بِلاخَره», because the «ا» after «ل» kept its long vowel. The form a listener confirmed is «بِلَخَرِه».
+  - The same goes for «ی»: a written «ی» is a long /iː/, or a /y/ in a diphthong.
+- **Words spelled unlike they sound** need an ear check before a full run:
+  - the Arabic article «ال» (بالاخره، فوق‌العاده، علی‌الخصوص، فی‌الواقع);
+  - a final «ی» said «ا» (حتی، موسی، عیسی، مصطفی);
+  - tanwin «ً» (write «دقیقا»، «کاملا» without it).
+
+  `references/fa-traps.tsv` lists the common ones, and `tag_lint.py` warns on them.
+- **A respelling is a guess until someone hears it.** Keep respellings in a lexicon (`written<TAB>spoken<TAB>note`, passed with `--lexicon`). Start the note with «✓» only after a human confirmed the reading by ear. The linter warns on every unconfirmed respelling that adds or drops an «ا/آ». Do not diacritise everyday native words: the model reads them right, and an extra mark can make it worse (a word-initial «اَ» can turn into «آ»).
 - Use the second person and speak to the viewer directly: «تو»، «گوشیت»، «پولت». Never «کاربران گرامی».
 
 ## 2. Sentence shape

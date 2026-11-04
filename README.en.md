@@ -14,8 +14,17 @@ Most TTS scripts fail in one of two ways. They are written as text, so the voice
    - about 1 tag per 3–4 sentences;
    - 0–2 natural laughs per reel;
    - a change of delivery every 8–12 s.
-4. Lints the result for free, to catch over-tagging, mistakes for the chosen model, written "haha", and openings with a greeting.
-5. A/B-tests the risky lines on your real voice before you spend credits on the full script. It uses a fixed seed and a `--dry-run` cost check, and STT shows whether a tag was performed or read aloud.
+4. Lints the result for free. It catches:
+   - lines without a beat label (` # HOOK 5`), and an arc with no strong hook, no dips or no change of delivery;
+   - over-tagging;
+   - written register and missing or repeated interjections;
+   - mistakes for the chosen model;
+   - written "haha", and openings with a greeting;
+   - for Persian, words spelled unlike they sound («بالاخره», «حتی») and unconfirmed respellings that add or drop an «ا».
+
+   It ends with an A/B plan: the lines to test first and what each costs (`--ab-budget`).
+5. Gates generation on approval. `--approve` stamps the exact text the person approved, and `--check-approved` fails until the stamp matches the text. Gate any TTS pipeline on it.
+6. A/B-tests the risky lines on your real voice before you spend credits on the full script. It uses a fixed seed and a `--dry-run` cost check, and STT shows whether a tag was performed or read aloud.
 
 It works with [Claude Code](https://claude.com/claude-code) and any agent that reads `SKILL.md` skills. The scripts are plain Python 3.9+ with no dependencies; ffmpeg is optional.
 
@@ -32,8 +41,12 @@ Or clone it into a project's `.claude/skills/`. The skill triggers whenever a sc
 ## Use the scripts directly
 
 ```bash
-# Free: beat map, length estimate, over-tagging and model errors
-python scripts/tag_lint.py examples/reel-fa.txt --model eleven_v4 --tempo 1.15
+# Free: beat map, arc, ear-rewrite and reading checks, A/B plan
+python scripts/tag_lint.py examples/reel-en.txt --model eleven_v4 --tempo 1.15 --ab-budget 160
+
+# After the text is approved: stamp it, and gate every TTS call on the stamp
+python scripts/tag_lint.py script.txt --approve
+python scripts/tag_lint.py script.txt --check-approved   # exit 0 approved, 3 not
 
 # Free: measure your voice's real speaking rate from one finished take
 python scripts/tag_lint.py script.txt --calibrate voice.mp3
@@ -48,7 +61,7 @@ python scripts/ab.py "[excited] Okay, this ends FRIDAY!" "Okay... this ends Frid
 
 `ab.py` options:
 - `--prev` / `--next`: the neighbouring lines, sent as context.
-- `--lexicon words.tsv`: respellings in the form `written<TAB>spoken`, for brand names and loanwords.
+- `--lexicon words.tsv` (repeatable): respellings in the form `written<TAB>spoken<TAB>note`, for brand names and loanwords. A note that starts with «✓» means someone confirmed it by ear; `LISTEN FOR` names the rest. `tag_lint.py` takes the same option.
 - `--en-check`: also transcribe as English, to catch an English tag leaking into a non-English script.
 
 Run the offline tests with `python -m unittest discover tests`.

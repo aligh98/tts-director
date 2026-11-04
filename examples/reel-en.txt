@@ -1,19 +1,19 @@
-[excited] Okay, this ends FRIDAY... and it's not coming back!
-The phone everyone's been waiting for is half price right now.
-But before you buy, check these three things.
+[excited] Okay, this ends FRIDAY... and it's not coming back!   # HOOK 5
+The phone everyone's been waiting for is half price right now.   # SETUP 4
+But before you buy... check these three things.   # SETUP 4
 
-First: the battery!
-Make sure it's at least five thousand milliamp hours.
+First: the battery!   # ITEM 4
+Make sure it's at least five thousand milliamp hours.   # ITEM 3
 
-Second: the camera!
-Test it at night, not in daylight. That's where the real difference is.
+Second: the camera!   # ITEM 4
+Want to know where the real difference is? Test it at night.   # REVEAL 3
 
-Third: the warranty!
-[sighs] No warranty means one tiny fault costs you a fortune...
-So get a real one.
+Third: the warranty!   # ITEM 4
+[sighs] No warranty means one tiny fault costs you a fortune...   # WARNING 2
+So get a real one!   # ITEM 4
 
-[whispers] Here's the trick...
-keep your battery between twenty and eighty percent.
-[chuckles] You don't need to charge it to a hundred every night.
+[whispers] Here's the trick...   # TIP 2
+keep your battery between twenty and eighty percent!   # TIP 3
+[chuckles] You don't need to charge it to a hundred every night.   # IRONY 3
 
-Want the link? Just comment "link"... and we'll send it over!
+Want the link? Just comment "link"... and we'll send it over!   # CTA 4

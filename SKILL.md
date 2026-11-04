@@ -11,7 +11,18 @@ This skill does not replace your TTS pipeline. It prepares the text that goes in
 
 ## Workflow
 
-1. **Beat map.** Label every line with its role and a target energy from 1 to 5. The roles are:
+Do the steps in order. The tools check them, so none can be skipped silently:
+- `tag_lint.py` gives an ERROR when a line has no beat label;
+- `tag_lint.py --check-approved` fails until the person has approved the exact text. Gate your TTS call on it.
+
+Before step 1, read the delivery reference for the script's language (`references/persian-delivery.md` or `references/english-delivery.md`) and `references/audio-tags.md`. The linter checks only part of them.
+
+1. **Beat map, inside the script.** End every spoken line with « # ROLE ENERGY» (energy 1–5):
+   ```
+   [excited] Wait, this ends Friday... and it's not coming back!   # HOOK 5
+   [whispers] Here's the trick...                                  # TIP 2
+   ```
+   The roles are:
    - HOOK
    - SETUP
    - REVEAL
@@ -21,40 +32,65 @@ This skill does not replace your TTS pipeline. It prepares the text that goes in
    - WARNING
    - CTA
 
-   Plan the arc before touching words. See [Viral arc](#viral-arc).
-2. **Rewrite for the ear.** For Persian use `references/persian-delivery.md`; for English, `references/english-delivery.md`. Keep the meaning and every fact. Rewriting means:
+   Plan the arc before touching words. See [Viral arc](#viral-arc). Strip the labels before the text goes to the TTS: `tag_lint.strip_beats(text)` does it, or remove everything from « #» to the end of each line. For a script that is not a short-form video, pass `--no-beats`.
+2. **Rewrite for the ear.** Keep the meaning and every fact. Rewriting means:
    - shorter sentences;
    - the punch word moved to the end;
    - the interjections a native speaker would actually use;
    - punctuation that marks breaths.
 
-   Show the text to the person before generating anything. Generating audio costs them credits, and the wording is theirs to approve.
+   For Persian, follow the **alef rule** in `persian-delivery.md`: the voice reads every «ا» as a long «آ», and a short /a/ is a fatha only. Some words are spelled unlike they sound («بالاخره»، «حتی»، «فوق‌العاده»; see `references/fa-traps.tsv`). Treat a respelling as a guess until a human confirms it by ear; mark confirmed rows in your lexicon with a note that starts with «✓».
 3. **Tag pass.** Tag only the beats the text alone cannot carry, within the [Tag budget](#tag-budget). For tag names and what each one is for, see `references/audio-tags.md`.
 4. **Lint (free):**
    ```
-   python scripts/tag_lint.py SCRIPT --model eleven_v4 --tempo 1.15
+   python scripts/tag_lint.py SCRIPT --model eleven_v4 --tempo 1.15 [--lexicon words.tsv] [--ab-budget 160]
    ```
-   It prints a beat map with estimated times. It flags:
-   - over-tagging;
-   - laughs that are too many or too close together;
-   - a repeated tag;
-   - «!» on every line, and too many ellipses;
-   - long sentences;
-   - written laughter («هاها», "haha");
-   - an opening greeting;
-   - SSML on v3/v4, and tags on models that read them aloud.
+   It prints the beat map with estimated times, then checks:
+   - **Beats and arc:**
+     - a missing or invalid label (ERROR);
+     - a first line that is not a HOOK at energy 4–5 (ERROR);
+     - a TIP above energy 3;
+     - a flat arc;
+     - more than 14 s without a change of delivery;
+     - a low tag on a high beat, or a high tag on a low beat;
+     - a whisper or sigh not followed by a line that lifts the energy.
+   - **Tags:**
+     - over-tagging;
+     - laughs that are too many or too close together;
+     - a repeated tag;
+     - staging tags;
+     - SSML on v3/v4, and tags on models that read them aloud.
+   - **Ear rewrite:**
+     - written register («را»، «است»، «می‌شود»; uncontracted English);
+     - fewer than 2 interjections, or a repeated one;
+     - «!» on every line, and too many ellipses;
+     - long sentences;
+     - written laughter («هاها», "haha");
+     - stretched letters;
+     - an opening greeting.
+   - **Persian readings:**
+     - unconfirmed respellings that change the number of «ا/آ»;
+     - `{written|spoken}` overrides that do the same;
+     - trap words;
+     - tanwin.
 
-   Fix every ERROR. Keep a WARN only when you can say why.
-5. **A/B the risky lines.** These are the hook, every laugh, any whisper or sarcasm, and the CTA. Check the cost first; `--dry-run` sends nothing:
+   Fix every ERROR. Keep a WARN only when you can say why. The **A/B PLAN** at the end lists the lines to test, in priority order, with their cost; see [A/B priority](#ab-priority).
+5. **Approval.** Show the person the full text with its beat map and the A/B plan. Generating audio costs them credits, and the wording is theirs to approve. After their OK:
+   ```
+   python scripts/tag_lint.py SCRIPT --approve
+   ```
+   This writes `SCRIPT.approved.json`, the SHA-256 of the stripped file text. `--approve` refuses while there is an ERROR. Before every TTS call, run `tag_lint.py SCRIPT --check-approved`: exit 0 means approved, exit 3 means no stamp or a changed text. Any edit needs a new OK. A pipeline can also compare the hash itself: `sha256(file_text.strip())`. Choosing an A/B take does not approve the whole text.
+6. **A/B the risky lines** in the A/B plan's order. Check the cost first; `--dry-run` sends nothing:
    ```
    python scripts/ab.py "VARIANT A" "VARIANT B" --voice VOICE_ID --stability 0.35 --stability 0.5 --prev "line before" --next "line after" --out probe/ab --dry-run
    ```
    Remove `--dry-run` to generate. Every clip uses the same `--seed`, so the differences come from the text and the settings, not from chance. Each clip is transcribed:
    - `LEAK` means a tag was read aloud as a word. Drop or rephrase that tag.
    - An event such as `[laughter]` or `[خنده]` means the sound was performed.
+   - `LISTEN FOR` (Persian) names the words whose reading is unconfirmed.
 
-   Speech-to-text cannot judge excitement, so let a human ear pick the winner.
-6. **Generate the full script** with the chosen variants and settings. Then:
+   Speech-to-text cannot judge excitement or vowel length, so let a human ear pick the winner. If the chosen take changes the text, lint and approve again.
+7. **Generate the full script** with the chosen variants and settings, after `--check-approved` passes. Then:
    - Set the pacing with `ffmpeg -af atempo=1.1` (1.10–1.20 keeps pitch), not with a speed setting. If you have word timings, divide them by the same factor.
    - To fix one line, regenerate only that chunk with `previous_text`/`next_text` and splice it in.
 
@@ -79,6 +115,17 @@ This skill does not replace your TTS pipeline. It prepares the text that goes in
 - **Bring the energy back after `[whispers]` or `[sighs]`.** Do it on the next line with the text (a «!», a short punch) or with a delivery tag. Check it by ear.
 - **Keep clarity lines clean.** Numbers, dates, prices, product names and the CTA keyword are said plainly. A warm tag may come before the CTA sentence, never inside the keyword.
 - **Never tag staging or music** (`[music]`, `[standing]`), and never tag sensitive topics such as grief, illness or tragedy.
+
+## A/B priority
+
+Test credits are often limited. Spend them in this order; the linter's A/B PLAN lists the lines the same way, and `--ab-budget N` marks what fits:
+1. **The hook.** It decides the watch. Test two variants: a tag against none, or two wordings.
+2. **The first use of each risky tag**: whisper, sigh, laugh, sarcasm, gasp. A tag you have already tested on this voice goes lower.
+3. **Unconfirmed readings** (Persian): test the word alone, which costs about 15 characters.
+4. **The lift after a low tag**: the line after a whisper or sigh, with `--prev` set to the low line. Does the voice come back up?
+5. **The CTA**, unless the person already approved it word for word.
+
+When a line does not fit, shorten the clip to the risky words alone; `--prev`/`--next` give the context and are not spoken. Never skip a level-1 or level-2 item to test a lower one. Tell the person what was not tested.
 
 ## Viral arc
 
@@ -131,6 +178,8 @@ Tag behaviour and speaking rate depend on the voice. Once per voice:
 | `references/persian-delivery.md` | Persian for the ear: colloquial register, interjections, punctuation as a score, emphasis without capitals, before/after examples |
 | `references/english-delivery.md` | The same for English |
 | `references/audio-tags.md` | Tag catalogue by job, tested-voices table, what never to tag |
-| `scripts/tag_lint.py` | Free checker: beat map, length estimate, over-tagging and model errors, `--calibrate` |
-| `scripts/ab.py` | Variants × stability on the real voice with a fixed seed, STT leak and event detection, `--dry-run`, `--lexicon` |
-| `examples/` | A directed Persian and English reel script |
+| `references/fa-traps.tsv` | Persian words spelled unlike they sound (Arabic «ال», final «ی» said «ا»); the reading checks warn on them |
+| `scripts/tag_lint.py` | Free checker: required beat labels and arc, ear-rewrite rules, tags, model errors, Persian readings, A/B plan, `--approve` / `--check-approved`, `--calibrate` |
+| `scripts/ab.py` | Variants × stability on the real voice with a fixed seed, STT leak and event detection, `LISTEN FOR`, `--dry-run`, `--lexicon` |
+| `scripts/reading.py` | Shared lexicon loading (✓ = confirmed by ear), respelling and the Persian reading checks |
+| `examples/` | A directed Persian and English reel script, with beat labels |

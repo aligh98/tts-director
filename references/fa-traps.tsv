@@ -1,0 +1,28 @@
+# Persian words spelled unlike they sound. A TTS model guesses vowels from letters, so it may read these literally.
+# Format: word<TAB>kind<TAB>intended reading. tag_lint.py and ab.py warn when a script contains one and your --lexicon
+# has no ✓ row for it. A word here is not always misread: it means "listen before the full run".
+# Once a human confirms a spelling by ear, add it to your lexicon with a note that starts with ✓
+# (spoken = written when the plain spelling is already fine).
+#
+# Kinds:
+#   ال   the Arabic article: its «ا» is not said as «آ» (بالاخره = bel'akhare)
+#   ی=ا  a final «ی» said as «ا» (حتی = hattā)
+
+بالاخره	ال	bel'akhare: «بِلَخَرِه», never «بِلاخَره»
+بالفعل	ال	belfe'l: «بِلْفِعْلْ»
+بالعکس	ال	bel'aks: «بِلْعَکْسْ»
+بالکل	ال	belkol: «بِلْکُلْ»
+بالقوه	ال	belghovve: «بِلْقُوِّه»
+علی‌الخصوص	ال	'alalkhosus: «عَلَلْخُصُوصْ»
+علی‌الحساب	ال	'alalhesāb: «عَلَلْحِسابْ»
+علی‌الظاهر	ال	'alazzāher: «عَلَزّاهِرْ»
+فی‌الواقع	ال	felvāghe': «فِلْواقِعْ»
+فی‌المثل	ال	felmasal: «فِلْمَثَلْ»
+فوق‌العاده	ال	foghol'āde: «فُوقُلْعادِه»
+حتی‌الامکان	ال	hattalemkān: «حَتَّلْاِمْکانْ»
+بین‌المللی	ال	beynolmelali: «بِیْنُلْمِلَلی»
+حتی	ی=ا	hattā: «حَتّا»
+موسی	ی=ا	musā: «مُوسا»
+عیسی	ی=ا	'isā: «عیسا»
+مصطفی	ی=ا	mostafā: «مُصْطَفا»
+یحیی	ی=ا	yahyā: «یَحْیا»

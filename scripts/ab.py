@@ -12,8 +12,10 @@ Each clip is transcribed with ElevenLabs Scribe so you can see, without ears:
   speed   spoken characters per second
 Then listen and pick by ear. Cost: each variant's length once per stability value (STT is billed separately).
 
---lexicon FILE: a TSV of `written<TAB>spoken` respellings applied before sending (longest first),
-e.g. a brand name with vowel marks. --prev / --next give the model the neighbouring lines as context.
+--lexicon FILE (repeatable): a TSV of `written<TAB>spoken<TAB>note` respellings applied before sending (longest
+first), e.g. a brand name with vowel marks. For Persian, `LISTEN FOR` names the words whose reading nobody has
+confirmed by ear (no ✓ note; see scripts/reading.py): judge those words in the clip.
+--prev / --next give the model the neighbouring lines as context.
 
 API key: $ELEVENLABS_API_KEY or ELEVENLABS_API_KEY=... in a .env in the cwd or any parent folder.
 Voice: --voice or $ELEVENLABS_VOICE_ID.
@@ -32,6 +34,9 @@ import urllib.error
 import urllib.request
 import uuid
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import reading  # noqa: E402
 
 API = "https://api.elevenlabs.io/v1"
 TAG = re.compile(r"\[([^\[\]\n]{1,40})\]")
@@ -89,24 +94,16 @@ def seconds(path: Path) -> float:
     return float(out.strip() or 0)
 
 
-def load_lexicon(path: str | None) -> list[tuple[str, str]]:
-    if not path:
-        return []
-    rows = []
-    for line in Path(path).read_text(encoding="utf-8").splitlines():
-        if line.strip() and not line.startswith("#") and "\t" in line:
-            w, s = line.split("\t")[:2]
-            rows.append((w.strip(), s.strip()))
-    return sorted(rows, key=lambda r: -len(r[0]))
+def load_lexicon(paths) -> list[reading.Entry]:
+    if isinstance(paths, str):
+        paths = [paths]
+    return reading.load_lexicon(paths)
 
 
-def respell(text: str, lexicon: list[tuple[str, str]]) -> str:
-    """Replace whole words only; tags are left alone."""
-    parts = re.split(r"(\[[^\]]*\])", text)
-    for w, s in lexicon:
-        pat = re.compile(rf"(?<![\w؀-ۿ]){re.escape(w)}(?![\w؀-ۿ])")
-        parts = [p if p.startswith("[") else pat.sub(s, p) for p in parts]
-    return "".join(parts)
+def respell(text: str, lexicon) -> str:
+    """Replace whole words only; tags are left alone. LEXICON: Entry objects or (written, spoken) pairs.
+    A {written|spoken} override is sent as its spoken part."""
+    return reading.respell(reading.OVERRIDE.sub(lambda m: m.group(2), text), lexicon)
 
 
 def leaks(text: str, heard: str) -> list[str]:
@@ -130,7 +127,7 @@ def main():
     ap.add_argument("--seed", type=int, default=1234)
     ap.add_argument("--prev", help="the line before (context, not spoken)")
     ap.add_argument("--next", help="the line after (context, not spoken)")
-    ap.add_argument("--lexicon", help="TSV of written<TAB>spoken respellings")
+    ap.add_argument("--lexicon", action="append", help="TSV of written<TAB>spoken<TAB>note respellings; repeatable")
     ap.add_argument("--en-check", action="store_true", help="also transcribe as English (catches tags leaked in a non-English script)")
     ap.add_argument("--dry-run", action="store_true", help="print what would be sent and the character cost")
     a = ap.parse_args()
@@ -141,6 +138,10 @@ def main():
     if not variants:
         ap.error("give at least one variant")
     lex = load_lexicon(a.lexicon)
+    if a.lang in ("", "fa"):
+        for v in variants:
+            for w in reading.reading_checks(v, lex):
+                print(f"LISTEN FOR {w}")  # an A/B clip is an ear test: name the words to judge
     grid = [(i, v, respell(v, lex), s) for i, v in enumerate(variants) for s in (a.stability or [0.5])]
     cost = sum(len(sp) for _, _, sp, _ in grid)
     print(f"{len(grid)} clips, {cost} characters")
